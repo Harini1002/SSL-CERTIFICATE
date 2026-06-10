@@ -164,7 +164,7 @@ async function startServer() {
         },
         {
           name: "draft_escalation_ticket",
-          description: "Engage Gemini model reasoning to compile a structured ITIL P1/P2 remediation ticket for operational outages.",
+          description: "Engage Groq model reasoning to compile a structured ITIL P1/P2 remediation ticket for operational outages.",
           inputSchema: {
             type: "object",
             properties: {
@@ -325,7 +325,7 @@ async function startServer() {
     }
   });
 
-  // API 3: Generate ITIL ticket via Gemini AI
+  // API 3: Generate ITIL ticket via Groq AI
   app.post("/api/ticket", async (req, res) => {
     try {
       const { result } = req.body as { result: ScanResult };
@@ -344,7 +344,7 @@ async function startServer() {
     }
   });
 
-  // API 4: Generate renewal alert email draft via Gemini AI
+  // API 4: Generate renewal alert email draft via Groq AI
   app.post("/api/email", async (req, res) => {
     try {
       const { result } = req.body as { result: ScanResult };
@@ -360,7 +360,7 @@ async function startServer() {
     }
   });
 
-  // API 5: Generate Full Fleet Executive Summary via Gemini AI
+  // API 5: Generate Full Fleet Executive Summary via Groq AI
   app.post("/api/summary", async (req, res) => {
     try {
       const { results, summaryStats } = req.body as { results: ScanResult[]; summaryStats: any };

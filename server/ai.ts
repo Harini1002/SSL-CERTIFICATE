@@ -3,37 +3,55 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenAI, Type } from "@google/genai";
 import { ScanResult, IncidentTicket, ChatMessage } from "../src/types.js";
 
-let aiInstance: GoogleGenAI | null = null;
-
-function getAiClient(): GoogleGenAI | null {
-  if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
-      console.warn("GEMINI_API_KEY is not configured or uses default template value. AI mock fallback is enabled.");
-      return null;
-    }
-    aiInstance = new GoogleGenAI({
-      apiKey: apiKey,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build"
-        }
-      }
-    });
+function getApiKey(): string | null {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || apiKey === "MY_GROQ_API_KEY") {
+    console.warn("GROQ_API_KEY is not configured or uses default template value. AI mock fallback is enabled.");
+    return null;
   }
-  return aiInstance;
+  return apiKey;
+}
+
+// Helper to make POST request to Groq chat completion API
+async function callGroqChat(messages: any[], options: { model?: string; temperature?: number; topP?: number; responseJson?: boolean } = {}) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    return null;
+  }
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: options.model || "llama-3.3-70b-versatile",
+      messages: messages,
+      temperature: options.temperature ?? 0.7,
+      top_p: options.topP ?? 0.95,
+      ...(options.responseJson ? { response_format: { type: "json_object" } } : {})
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq API returned status ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || "";
 }
 
 // 1. Generate incident tickets
 export async function generateIncidentTicket(result: ScanResult): Promise<IncidentTicket> {
-  const client = getAiClient();
+  const apiKey = getApiKey();
   const ticketId = `INC-CERT-${Math.floor(100000 + Math.random() * 900000)}`;
   const nowStr = new Date("2026-06-09T09:58:12Z").toLocaleDateString();
 
-  if (!client) {
+  if (!apiKey) {
     // Elegant deterministic backup template
     const urgency = result.riskLevel === "expired" || result.riskLevel === "critical" ? "P1" : result.riskLevel === "high" ? "P2" : "P3";
     return {
@@ -54,31 +72,15 @@ export async function generateIncidentTicket(result: ScanResult): Promise<Incide
   }
 
   try {
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: `Generate a professional, structured DevSecOps ITIL Incident Ticket for this certificate issue:\nDomain: ${result.domain}\nDays Remaining: ${result.daysRemaining ?? "N/A"}\nExpiry Date: ${result.expiryDate}\nCA Issuer: ${result.issuer}\nRisk Level: ${result.riskLevel}\nGrade: ${result.sslGrade}\nAlgorithm: ${result.signatureAlgorithm}`,
-      config: {
-        systemInstruction: "You are a Senior DevSecOps Incident Response Coordinator. Generate highly structured, actionable, and executive-level ITIL incident tickets in JSON format.",
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            ticketSubject: { type: Type.STRING },
-            ticketBody: { type: Type.STRING },
-            urgencyLabel: { type: Type.STRING, enum: ["P1", "P2", "P3", "P4"] },
-            remediationSteps: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            prediction: { type: Type.STRING }
-          },
-          required: ["ticketSubject", "ticketBody", "urgencyLabel", "remediationSteps", "prediction"]
-        }
-      }
-    });
+    const systemPrompt = "You are a Senior DevSecOps Incident Response Coordinator. Generate highly structured, actionable, and executive-level ITIL incident tickets in JSON format.";
+    const userPrompt = `Generate a professional, structured DevSecOps ITIL Incident Ticket for this certificate issue:\nDomain: ${result.domain}\nDays Remaining: ${result.daysRemaining ?? "N/A"}\nExpiry Date: ${result.expiryDate}\nCA Issuer: ${result.issuer}\nRisk Level: ${result.riskLevel}\nGrade: ${result.sslGrade}\nAlgorithm: ${result.signatureAlgorithm}\n\nYou must return a valid JSON object matching this schema:\n{\n  "ticketSubject": "string",\n  "ticketBody": "string",\n  "urgencyLabel": "P1" | "P2" | "P3" | "P4",\n  "remediationSteps": ["string"],\n  "prediction": "string"\n}`;
 
-    const bodyText = response.text || "{}";
-    const data = JSON.parse(bodyText.trim());
+    const content = await callGroqChat([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ], { responseJson: true });
+
+    const data = JSON.parse(content?.trim() || "{}");
 
     return {
       id: ticketId,
@@ -91,18 +93,29 @@ export async function generateIncidentTicket(result: ScanResult): Promise<Incide
       createdAt: new Date().toISOString()
     };
   } catch (error) {
-    console.error("Gemini ticket generation error, falling back:", error);
-    // Return safety fallback ticket
-    return generateIncidentTicket(result); // Recursive call will safely resolve inside mock fallback above
+    console.error("Groq ticket generation error, falling back:", error);
+    const urgency = result.riskLevel === "expired" || result.riskLevel === "critical" ? "P1" : result.riskLevel === "high" ? "P2" : "P3";
+    return {
+      id: ticketId,
+      domain: result.domain,
+      ticketSubject: `[${urgency}] SSL Certificate Expiry Critical Outage Risk: ${result.domain}`,
+      ticketBody: `Error generating custom ticket: ${error instanceof Error ? error.message : String(error)}. Default remediation required.`,
+      urgencyLabel: urgency as any,
+      remediationSteps: [
+        `Trigger automated CA request challenge with current issuer: ${result.issuer}`,
+        "Complete Domain validation challenge (DNS TXT or ACME well-known folder verification)"
+      ],
+      prediction: "Expected lapse in 90 days.",
+      createdAt: new Date().toISOString()
+    };
   }
 }
 
 // 2. Generate Renewal Email
 export async function generateRenewalEmail(result: ScanResult): Promise<string> {
-  const client = getAiClient();
-  const now = new Date("2026-06-09T09:58:12Z").toLocaleDateString();
+  const apiKey = getApiKey();
 
-  if (!client) {
+  if (!apiKey) {
     return `TO      : SecOps Core Fleet <secops-alerts@company.com>
 CC      : DevOps Engineering <devops-leads@company.com>
 FROM    : CertGuard AI SecOps Agent <harinisivanathanvs@gmail.com>
@@ -141,28 +154,27 @@ Automated Monitoring and Remediation Framework`;
   }
 
   try {
-    const prompt = `Draft a premier professional IT alert notification email indicating that domain "${result.domain}" is expiring soon (${result.daysRemaining} days remaining) with issuer "${result.issuer}". Emphasize urgency for risk level "${result.riskLevel}". Include formal to/cc headers, technical charts table, specific consequences, and technical steps to resolve. Use clean professional email formatting.`;
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are an Elite DevSecOps Automation Agent. You write clear, professional, executive-level notification alerts that contain all details cleanly, with a direct copyable structure."
-      }
-    });
+    const systemPrompt = "You are an Elite DevSecOps Automation Agent. You write clear, professional, executive-level notification alerts that contain all details cleanly, with a direct copyable structure.";
+    const userPrompt = `Draft a premier professional IT alert notification email indicating that domain "${result.domain}" is expiring soon (${result.daysRemaining} days remaining) with issuer "${result.issuer}". Emphasize urgency for risk level "${result.riskLevel}". Include formal to/cc headers, technical charts table, specific consequences, and technical steps to resolve. Use clean professional email formatting.`;
 
-    return response.text || "Failed to generate email content.";
+    const content = await callGroqChat([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ]);
+
+    return content || "Failed to generate email content.";
   } catch (err) {
-    console.error("Failed to generate Gemini email draft:", err);
-    return `Failed to fetch Gemini automated draft. Manual deployment requested.`;
+    console.error("Failed to generate Groq email draft:", err);
+    return `Failed to fetch Groq automated draft. Manual deployment requested. Error: ${err instanceof Error ? err.message : String(err)}`;
   }
 }
 
 // 3. Generate Executive Summary
 export async function generateExecutiveSummary(results: ScanResult[], summaryStats: any): Promise<string> {
-  const client = getAiClient();
+  const apiKey = getApiKey();
   const dateStr = new Date("2026-06-09T09:58:12Z").toDateString();
 
-  if (!client) {
+  if (!apiKey) {
     const expiredCount = summaryStats.expired || 0;
     const criticalCount = summaryStats.critical || 0;
     const highCount = summaryStats.high || 0;
@@ -213,19 +225,18 @@ END OF EXECUTIVE REPORT | CERTGUARD AI SECURE FLEET`;
   }
 
   try {
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: `Generate a Board-Level SSL Executive Portfolio Audit with exactly the structured sections requested. Domain Scan Details: ${JSON.stringify(results)}, Risk Score metrics: ${JSON.stringify(summaryStats)}. Ensure sections are separated by neat ASCII banners or headers.`,
-      config: {
-        systemInstruction: "You are the Chief Information Security Officer (CISO) and Senior Infrastructure Auditor. You generate elite, multi-paragraph, authoritative security posture executive summaries."
-      }
-    });
+    const systemPrompt = "You are the Chief Information Security Officer (CISO) and Senior Infrastructure Auditor. You generate elite, multi-paragraph, authoritative security posture executive summaries.";
+    const userPrompt = `Generate a Board-Level SSL Executive Portfolio Audit with exactly the structured sections requested. Domain Scan Details: ${JSON.stringify(results)}, Risk Score metrics: ${JSON.stringify(summaryStats)}. Ensure sections are separated by neat ASCII banners or headers.`;
 
-    return response.text || "Failed to generate CISO executive report.";
+    const content = await callGroqChat([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ]);
+
+    return content || "Failed to generate CISO executive report.";
   } catch (error) {
-    console.error("Failed to generate executive report via Gemini, falling back:", error);
-    // Simple recursive fallback with ai disabled
-    return generateExecutiveSummary(results, summaryStats);
+    console.error("Failed to generate executive report via Groq, falling back:", error);
+    return `Failed to compile executive summary via Groq: ${error instanceof Error ? error.message : String(error)}`;
   }
 }
 
@@ -235,8 +246,8 @@ function resultShortDesc(r: ScanResult): string {
 
 // 4. Conversational Chat Agent
 export async function chatAboutPostures(messages: ChatMessage[], results: ScanResult[]): Promise<string> {
-  const client = getAiClient();
-  if (!client) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     // Elegant system chat responder when API is in local preview sandbox mock mode
     const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
@@ -284,35 +295,31 @@ What can I assist you with today?`;
   }
 
   try {
-    const sessionHistory = messages.map(m => {
-      return `${m.role === "user" ? "USER" : "ASSISTANT"}: ${m.content}`;
-    }).join("\n");
+    const systemPrompt = `You are the Senior DevSecOps cybersecurity mentor, CertGuard AI. You possess full expertise on SSL/TLS configurations, CAs, cryptography algorithms, and domain renewals.\nActive SSL Cert Records: ${JSON.stringify(results)}`;
 
-    const promptString = `Active SSL Cert Records: ${JSON.stringify(results)}
-Conversational context:\n${sessionHistory}
-Please answer the latest user query. Keep responses technically sound, highly helpful, and formatted beautifully in Markdown with bold titles, bullets, and short paragraphs. Do not mention that you have JSON files or database mock systems, act as a real live agent on real servers.`;
+    const groqMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }))
+    ];
 
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: promptString,
-      config: {
-        systemInstruction: "You are the Senior DevSecOps cybersecurity mentor, CertGuard AI. You possess full expertise on SSL/TLS configurations, CAs, cryptography algorithms, and domain renewals."
-      }
-    });
+    const content = await callGroqChat(groqMessages);
 
-    return response.text || "I was unable to compile a secure response. Please try again.";
+    return content || "I was unable to compile a secure response. Please try again.";
   } catch (error) {
-    console.error("Gemini conversational chat error:", error);
+    console.error("Groq conversational chat error:", error);
     return "The SecOps AI gateway is currently experiencing technical delays. Please try another prompt.";
   }
 }
 
 // 5. AI Leak Scanner of Login accounts
 export async function generateAiLeakReport(username: string, email: string): Promise<string> {
-  const client = getAiClient();
+  const apiKey = getApiKey();
   const assessmentDate = new Date("2026-06-09T12:15:00Z").toLocaleDateString();
 
-  if (!client) {
+  if (!apiKey) {
     return `### 🧠 CERTGUARD SECURIA INTERCEPT LOGS: ${email.toUpperCase()}
 **AI SECURITY EXPOSURE SCORE:** \`88 / 100\` (Secure Operations Grade)
 **ASSESSOR:** CertGuard Live threat tracker
@@ -338,19 +345,18 @@ We scanned active threat intelligence aggregates, open darknet paste repositorie
   }
 
   try {
-    const prompt = `Conduct an executive security intelligence evaluation and leak analysis for user "${username}" with corporate email "${email}". Assume they are logging into the CertGuard SecOps terminal. Provide a highly detailed, professional, and technical markdown document with a health index score out of 100, identified safe records, possible general darknet warning tips, and recommended credentials protective runbooks. Keep it clean and readable. Make sure it describes real server-side protective audits.`;
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are the Senior Threat Intelligence Officer on the CertGuard platform. You write highly technical, authoritative, and motivating cybersecurity reports."
-      }
-    });
+    const systemPrompt = "You are the Senior Threat Intelligence Officer on the CertGuard platform. You write highly technical, authoritative, and motivating cybersecurity reports.";
+    const userPrompt = `Conduct an executive security intelligence evaluation and leak analysis for user "${username}" with corporate email "${email}". Assume they are logging into the CertGuard SecOps terminal. Provide a highly detailed, professional, and technical markdown document with a health index score out of 100, identified safe records, possible general darknet warning tips, and recommended credentials protective runbooks. Keep it clean and readable. Make sure it describes real server-side protective audits.`;
 
-    return response.text || "Diagnostic failed. Please reload terminal.";
+    const content = await callGroqChat([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ]);
+
+    return content || "Diagnostic failed. Please reload terminal.";
   } catch (err) {
-    console.error("Gemini leak scanner failed:", err);
-    return generateAiLeakReport(username, email);
+    console.error("Groq leak scanner failed:", err);
+    return `Diagnostic failed with Groq: ${err instanceof Error ? err.message : String(err)}`;
   }
 }
 
@@ -362,11 +368,20 @@ export async function runCustomPromptLab(
   topP: number,
   selectedModel: string
 ): Promise<{ text: string; latencyMs: number; modelUsed: string }> {
-  const client = getAiClient();
+  const apiKey = getApiKey();
   const startTime = Date.now();
-  const activeModel = selectedModel || "gemini-3.5-flash";
+  let activeModel = selectedModel || "llama-3.3-70b-versatile";
 
-  if (!client) {
+  // Map Gemini models to equivalent Groq models in case they are selected
+  if (activeModel.includes("gemini-")) {
+    if (activeModel.includes("pro")) {
+      activeModel = "llama-3.3-70b-versatile";
+    } else {
+      activeModel = "llama-3.1-8b-instant";
+    }
+  }
+
+  if (!apiKey) {
     // Offline / Mock fallback simulation with authentic SecOps insights
     await new Promise(resolve => setTimeout(resolve, 800));
     const mockResponse = `### 🧪 OFFLINE PROMPT SIMULATOR DETECTED
@@ -378,11 +393,11 @@ export async function runCustomPromptLab(
 Your input prompt: _"${prompt}"_ has been verified against our standard compliance matrices.
 
 *   **Audit Confidence**: 96%
-*   **Response Generation**: Decoupling SSL key validation algorithms. Please configure your \`GEMINI_API_KEY\` under the AI Studio Settings menu to run live cloud-hosted neural pipelines.
+*   **Response Generation**: Decoupling SSL key validation algorithms. Please configure your \`GROQ_API_KEY\` in the \`.env\` file to run live cloud-hosted neural pipelines.
 *   **Prompt Tokens**: ~${Math.floor(prompt.length / 4)} tokens.
 *   **Completion Tokens**: ~340 tokens.
 
-This is a beautiful, offline-certified simulation. To trigger direct, real-time Gemini inference, set up your credentials.`;
+This is a beautiful, offline-certified simulation. To trigger direct, real-time Groq inference, set up your credentials.`;
     return {
       text: mockResponse,
       latencyMs: Date.now() - startTime,
@@ -391,28 +406,29 @@ This is a beautiful, offline-certified simulation. To trigger direct, real-time 
   }
 
   try {
-    const response = await client.models.generateContent({
+    const messages = [];
+    if (systemInstruction) {
+      messages.push({ role: "system", content: systemInstruction });
+    }
+    messages.push({ role: "user", content: prompt });
+
+    const content = await callGroqChat(messages, {
       model: activeModel,
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction || undefined,
-        temperature: temperature,
-        topP: topP,
-      }
+      temperature: temperature,
+      topP: topP
     });
 
     return {
-      text: response.text || "No text return received from the model.",
+      text: content || "No text return received from the model.",
       latencyMs: Date.now() - startTime,
       modelUsed: activeModel
     };
   } catch (error: any) {
-    console.error("Gemini prompt lab failed:", error);
+    console.error("Groq prompt lab failed:", error);
     return {
-      text: `### ❌ Gemini API Error Received\n\n\`\`\`text\n${error.message || error}\n\`\`\`\n\nPlease recheck your parameters or ensure your model selection complies with your API Key access permissions (such as paid models tier status).`,
+      text: `### ❌ Groq API Error Received\n\n\`\`\`text\n${error.message || error}\n\`\`\`\n\nPlease recheck your parameters or ensure your model selection complies with your API Key access permissions.`,
       latencyMs: Date.now() - startTime,
       modelUsed: activeModel
     };
   }
 }
-

@@ -252,7 +252,7 @@ export default function App() {
   const [promptLabPrompt, setPromptLabPrompt] = useState("Perform a complete regulatory threat analysis audit on the SSL certificate portfolio, evaluating CA distribution clusters and recommended remediation schedules.");
   const [promptLabTemperature, setPromptLabTemperature] = useState(0.7);
   const [promptLabTopP, setPromptLabTopP] = useState(0.95);
-  const [promptLabModel, setPromptLabModel] = useState("gemini-3.5-flash");
+  const [promptLabModel, setPromptLabModel] = useState("llama-3.3-70b-versatile");
   const [promptLabResponse, setPromptLabResponse] = useState("");
   const [promptLabLoading, setPromptLabLoading] = useState(false);
   const [promptLabLatency, setPromptLabLatency] = useState<number | null>(null);
@@ -646,7 +646,7 @@ export default function App() {
       let warningCount = 0;
       let healthyCount = 0;
       
-      scannedResults.forEach(item => {
+      for (const item of scannedResults) {
         if (item.riskLevel === "expired" || item.riskLevel === "critical" || item.riskLevel === "high" || item.status !== "success") {
           overallStatus = "CRITICAL";
           criticalCount++;
@@ -656,7 +656,7 @@ export default function App() {
         } else {
           healthyCount++;
         }
-      });
+      }
 
       setScanAlert({
         isOpen: true,
@@ -752,7 +752,7 @@ export default function App() {
     let warningCount = 0;
     let healthyCount = 0;
     
-    scannedWatcherResults.forEach(item => {
+    for (const item of scannedWatcherResults) {
       if (item.riskLevel === "expired" || item.riskLevel === "critical" || item.riskLevel === "high" || item.status !== "success") {
         overallStatus = "CRITICAL";
         criticalCount++;
@@ -762,7 +762,7 @@ export default function App() {
       } else {
         healthyCount++;
       }
-    });
+    }
 
     setScanAlert({
       isOpen: true,
@@ -1756,7 +1756,7 @@ Prepared by CertGuard DevSecOps Generator`);
                     <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1.5 mb-1.5">
                       <span className="text-cyan-300 font-bold tracking-wider uppercase text-[8px] flex items-center gap-1">
                         <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
-                        <span>Gemini SecOps Audit Response</span>
+                        <span>Groq SecOps Audit Response</span>
                       </span>
                       <button 
                         type="button" 
@@ -2414,7 +2414,7 @@ Prepared by CertGuard DevSecOps Generator`);
           <div className="space-y-1 pl-1 text-slate-500">
             <span className="text-[9px] tracking-wider block font-bold uppercase font-mono text-slate-600">Diagnostics Platform</span>
             <span className="text-[10px] block font-mono">TLS Certificate Chain Analyzer v1.3</span>
-            <span className="text-[10px] block font-mono">Gemini-3.5-Flash Core Orchestrator</span>
+            <span className="text-[10px] block font-mono">Groq Llama-3.3 Core Orchestrator</span>
           </div>
         </aside>
 
@@ -3468,7 +3468,7 @@ Due Date: Before ${r.expiryDate ? new Date(new Date(r.expiryDate).getTime() - 6 
                 >
                   {renderPageHeaderBanner(
                     "Threat Advisory Downloader & Intelligence Suite",
-                    "Choose an asset domain, configure cryptographic threat templates, or call the Gemini AI Assistant on-demand to compile custom alerts to download instantly.",
+                    "Choose an asset domain, configure cryptographic threat templates, or call the Groq AI Assistant on-demand to compile custom alerts to download instantly.",
                     "/circuit_motherboard.png",
                     <Mail className="w-5 h-5 text-sky-400" />
                   )}
@@ -3565,7 +3565,7 @@ Due Date: Before ${r.expiryDate ? new Date(new Date(r.expiryDate).getTime() - 6 
                       <div className="rounded-xl bg-slate-950/40 border border-slate-900/60 p-3.5 text-[10px] font-mono text-slate-400 space-y-1.5">
                         <span className="font-bold text-sky-400 uppercase tracking-widest text-[8px] block">AI Co-Pilot Advisor Tips:</span>
                         <p className="leading-relaxed">
-                          Generating with AI sends relevant diagnostic results to Gemini, and utilizes specific executive copywriting styles for high-fidelity compliance response. Just click download to retrieve.
+                          Generating with AI sends relevant diagnostic results to Groq, and utilizes specific executive copywriting styles for high-fidelity compliance response. Just click download to retrieve.
                         </p>
                       </div>
                     </div>
@@ -4070,11 +4070,12 @@ Due Date: Before ${r.expiryDate ? new Date(new Date(r.expiryDate).getTime() - 6 
                             onChange={(e) => setPromptLabModel(e.target.value)}
                             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 font-mono text-xs text-white outline-none focus:border-cyan-500 transition-all font-bold cursor-pointer"
                           >
-                            <option value="gemini-3.5-flash">gemini-3.5-flash (Balanced Speed / Intelligence)</option>
-                            <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Deep Code Reasoning - Paid Tier)</option>
+                            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Deep Reasoning / Versatile)</option>
+                            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Balanced Speed / Intelligence)</option>
+                            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (High Context MoE)</option>
                           </select>
                           <span className="text-[9px] text-slate-500 leading-normal block">
-                            Gemini model architecture determines primary inference capabilities. Flash model resolves in milliseconds.
+                            Groq model architecture determines primary inference capabilities. Llama-3.3 resolves in milliseconds.
                           </span>
                         </div>
 
@@ -4127,7 +4128,7 @@ Due Date: Before ${r.expiryDate ? new Date(new Date(r.expiryDate).getTime() - 6 
                             placeholder="System guidelines..."
                           />
                           <span className="text-[9px] text-slate-500 block leading-relaxed">
-                            Provides constant identity constraints inside Gemini context windows, overriding generic assistant defaults.
+                            Provides constant identity constraints inside Groq context windows, overriding generic assistant defaults.
                           </span>
                         </div>
 
@@ -4341,7 +4342,7 @@ State whether this configuration complies with optimal regulatory guidelines (PC
                         <span>API Security Gateways</span>
                       </h4>
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        The CertGuard orchestrator uses the native Node TLS stack to negotiate raw SSL handshakes. No remote data is transmitted to third parties except when generating ITIL helpdesk tickets and CISO audit summaries through our zero-leak Gemini-3.5-Flash pipeline.
+                        The CertGuard orchestrator uses the native Node TLS stack to negotiate raw SSL handshakes. No remote data is transmitted to third parties except when generating ITIL helpdesk tickets and CISO audit summaries through our zero-leak Groq pipeline.
                       </p>
                       
                       <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
