@@ -272,3 +272,42 @@ python3 mailer.py --action [test|critical|renewal|bulk] --data [JSON_PAYLOAD_STR
 *   **CSV Exporter (`/api/export` with `format=csv`)**: Outputs standard cert logs (Domain, Issuer, Expiry, Days Left, Protocol, Grade).
 *   **User Ranked CSV (`/api/export` with `format=user_csv`)**: Sorts domains by urgent days-to-expire, including warning tags (e.g. `EXPIRED`, `IMMINENT_OUTAGE`).
 *   **Renewal Tasks Markdown (`/api/export` with `format=user_md`)**: Generates structured, readable checklist sheets with priority icons indicating which certificates need immediate CA re-issue.
+
+---
+
+## 🤖 7. AI Notes & LLM Telemetry Specifications
+
+This section details the prompt engineering configurations, model selection, and execution parameters utilized across the platform's AI micro-services.
+
+### ⚙️ Global Inference Settings
+*   **Primary Model**: `gemini-3.5-flash`
+*   **Fallback Strategy**: Local mock data generator is activated if the `GEMINI_API_KEY` is empty, ensuring zero runtime crashes and authentic diagnostic simulations.
+*   **Telemetry Telemetry**: Custom prompt labs record prompt tokens, completion tokens, latency indicators, and model validation status.
+
+### 📝 Prompt Configurations & Instructions
+
+#### 1. ITIL Incident Ticketing (`generateIncidentTicket`)
+*   **System Instruction**:
+    > You are a Senior DevSecOps Incident Response Coordinator. Generate highly structured, actionable, and executive-level ITIL incident tickets in JSON format.
+*   **Output Requirements**: JSON format containing `ticketSubject`, `ticketBody`, `urgencyLabel` (enum `P1`–`P4`), `remediationSteps`, and `prediction` fields.
+
+#### 2. Critical Email Advisory (`generateRenewalEmail`)
+*   **System Instruction**:
+    > You are an Elite DevSecOps Automation Agent. You write clear, professional, executive-level notification alerts that contain all details cleanly, with a direct copyable structure.
+*   **Context Payload**: Injects domain name, risk indicator, days remaining, and target CA authority.
+
+#### 3. Posture Audit CISO Summary (`generateExecutiveSummary`)
+*   **System Instruction**:
+    > You are the Chief Information Security Officer (CISO) and Senior Infrastructure Auditor. You generate elite, multi-paragraph, authoritative security posture executive summaries.
+*   **Content Schema**: ASCII tables, CISO score breakdown, next 48-hour checklists, 30-day security roadmap milestones, and compliance impacts (e.g., SOC2, GDPR, PCI-DSS).
+
+#### 4. Preemptive Pre-Auth Leak Diagnosis (`generateAiLeakReport`)
+*   **System Instruction**:
+    > You are the Senior Threat Intelligence Officer on the CertGuard platform. You write highly technical, authoritative, and motivating cybersecurity reports.
+*   **Audit Scope**: Analyzes darknet exposure, past breach ledger references, corporate domain status, and suggests credential protection runbooks.
+
+#### 5. SecOps Chat Buddy Co-Pilot (`chatAboutPostures`)
+*   **System Instruction**:
+    > You are the Senior DevSecOps cybersecurity mentor, CertGuard AI. You possess full expertise on SSL/TLS configurations, CAs, cryptography algorithms, and domain renewals.
+*   **Conversation Context**: Dynamically receives message thread history combined with the active scanned domain roster.
+
