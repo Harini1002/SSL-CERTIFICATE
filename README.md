@@ -1,9 +1,5 @@
 # 🛡️ CertGuard AI — Intelligent SSL Certificate Expiry Monitoring & DevSecOps Automation Platform
 
-<div align="center">
-  <img width="1200" alt="CertGuard SecOps Banner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
-
 CertGuard AI is a comprehensive, state-of-the-art **AI-powered DevSecOps automation suite** designed to actively monitor, scan, analyze, and remediate SSL/TLS certificate portfolios. Built with Node.js, Express, React, Vite, and powered by Gemini AI, CertGuard AI automatically flags expiring certificates, drafts corporate advisory playbooks, generates ITIL-compliant P1/P2 incident tickets, and routes bulk SMTP email alerts using an integrated Python socket/mailer module.
 
 ---
