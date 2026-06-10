@@ -1,0 +1,12 @@
+# Exclude local build and runtime artifacts from Docker container build context
+node_modules
+dist
+data
+*.log
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+README.md
+Document

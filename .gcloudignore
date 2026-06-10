@@ -1,0 +1,21 @@
+# This file instructs the gcloud tool to ignore directories and files
+# when uploading source code to GCP (e.g. for Google Cloud Build).
+
+# Ignore git and local configurations
+.git
+.gitignore
+.gcloudignore
+
+# Ignore dependency and build directories
+node_modules/
+dist/
+data/
+
+# Ignore local secrets and configs
+.env
+.env.*
+!.env.example
+
+# Log files and system files
+*.log
+.DS_Store

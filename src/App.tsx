@@ -59,6 +59,64 @@ shop.retailbrand.com
 hr.internaltools.net
 staging.devops.io`;
 
+const parseCsvToHostnames = (csvText: string): string => {
+  const lines = csvText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (lines.length === 0) return "";
+  
+  const rows = lines.map(line => {
+    const cells: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        cells.push(current.trim().replace(/^"|"$/g, ''));
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    cells.push(current.trim().replace(/^"|"$/g, ''));
+    return cells;
+  });
+
+  const header = rows[0];
+  let domainColIndex = -1;
+  for (let i = 0; i < header.length; i++) {
+    const col = header[i].toLowerCase();
+    if (col === "domain" || col === "hostname" || col === "host" || col === "url") {
+      domainColIndex = i;
+      break;
+    }
+  }
+
+  const domains: string[] = [];
+  if (domainColIndex !== -1 && rows.length > 1) {
+    for (let r = 1; r < rows.length; r++) {
+      const val = rows[r][domainColIndex];
+      if (val) domains.push(val);
+    }
+  } else {
+    rows.forEach(row => {
+      row.forEach(cell => {
+        const cleaned = cell.trim();
+        if (cleaned && !cleaned.includes(" ") && cleaned.includes(".")) {
+          domains.push(cleaned);
+        }
+      });
+    });
+  }
+
+  const filterHeaders = ["domain", "hostname", "host", "url", "domains", "hostnames", "hosts", "urls"];
+  const finalDomains = domains
+    .map(d => d.trim().replace(/^(https?:\/\/)?(www\.)?/, ""))
+    .filter(d => d && !filterHeaders.includes(d.toLowerCase()));
+
+  return [...new Set(finalDomains)].join("\n");
+};
+
 interface PageHeaderBannerProps {
   title: string;
   subtitle: string;
@@ -2405,8 +2463,8 @@ Prepared by CertGuard DevSecOps Generator`);
                       
                       <div className="flex-1 flex flex-col justify-between">
                         <div className="space-y-3">
-                          <label className="text-sm font-semibold text-slate-200 block">📁 Upload hostnames.txt</label>
-                          <p className="text-[11px] text-slate-400">Drop a plain text file containing your lists of domain servers to automatically parse host headers.</p>
+                          <label className="text-sm font-semibold text-slate-200 block">📁 Upload hostnames.csv</label>
+                          <p className="text-[11px] text-slate-400">Drop a CSV file containing your lists of domain servers to automatically parse hostnames.</p>
                         </div>
 
                         {/* DRAG AND DROP ZONE */}
@@ -2420,8 +2478,9 @@ Prepared by CertGuard DevSecOps Generator`);
                               const reader = new FileReader();
                               reader.onload = (event) => {
                                 if (event.target && typeof event.target.result === "string") {
-                                  setWatcherInput(event.target.result.trim());
-                                  triggerToast(`Loaded domains list from ${file.name}!`, "success");
+                                  const parsed = parseCsvToHostnames(event.target.result);
+                                  setWatcherInput(parsed);
+                                  triggerToast(`Loaded and parsed domains list from ${file.name}!`, "success");
                                 }
                               };
                               reader.readAsText(file);
@@ -2432,13 +2491,13 @@ Prepared by CertGuard DevSecOps Generator`);
                         >
                           <span className="text-2xl">📂</span>
                           <span className="text-xs text-slate-300 font-semibold">
-                            {uploadedFileName ? `Loaded: ${uploadedFileName}` : "Drag & Drop hostnames.txt or Click to Browse"}
+                            {uploadedFileName ? `Loaded: ${uploadedFileName}` : "Drag & Drop hostnames.csv or Click to Browse"}
                           </span>
-                          <span className="text-[10px] text-slate-500">Supports (.txt) plaintext listing</span>
+                          <span className="text-[10px] text-slate-500">Supports (.csv) spreadsheet listing</span>
                           <input 
                             id="watcher-file-picker"
                             type="file" 
-                            accept=".txt"
+                            accept=".csv"
                             onChange={(e) => {
                               if (e.target.files && e.target.files[0]) {
                                 const file = e.target.files[0];
@@ -2446,8 +2505,9 @@ Prepared by CertGuard DevSecOps Generator`);
                                 const reader = new FileReader();
                                 reader.onload = (event) => {
                                   if (event.target && typeof event.target.result === "string") {
-                                    setWatcherInput(event.target.result.trim());
-                                    triggerToast(`Loaded domains list from ${file.name}!`, "success");
+                                    const parsed = parseCsvToHostnames(event.target.result);
+                                    setWatcherInput(parsed);
+                                    triggerToast(`Loaded and parsed domains list from ${file.name}!`, "success");
                                   }
                                 };
                                 reader.readAsText(file);
