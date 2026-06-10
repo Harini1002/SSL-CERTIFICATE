@@ -24,9 +24,9 @@ RUN npm run build
 # Prune development dependencies to keep the final image minimal
 RUN npm prune --production
 
-# Cloud Run injects PORT, we set a default of 8080
-ENV PORT=8080
-EXPOSE 8080
+# Hugging Face Spaces requires port 7860
+ENV PORT=7860
+EXPOSE 7860
 
 # Start server
 CMD ["npm", "start"]
