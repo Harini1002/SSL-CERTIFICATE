@@ -1,0 +1,6 @@
+{
+  "name": "CertGuard AI",
+  "description": "AI-Powered SSL Certificate Expiry Monitoring and DevSecOps Automation Platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

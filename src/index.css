@@ -1,0 +1,189 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand-deep: #020617;
+  --color-brand-surface: rgba(14, 22, 38, 0.40);
+  --color-brand-surface-2: rgba(22, 34, 63, 0.60);
+  --color-brand-accent: #22d3ee;
+  --color-brand-accent-2: #818cf8;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-brand-deep);
+    color: #F1F5F9;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+
+  /* Thin futuristic cyber scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(2, 6, 23, 0.4);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, 0.35);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 211, 238, 0.6);
+  }
+}
+
+/* Glassmorphism overrides with backdrop blur to ensure legibility on internal pages */
+.bg-brand-surface {
+  background-color: rgba(14, 22, 38, 0.60) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-color: rgba(34, 211, 238, 0.15) !important;
+}
+
+.bg-brand-surface\/40 {
+  background-color: rgba(14, 22, 38, 0.40) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.bg-brand-surface\/80 {
+  background-color: rgba(14, 22, 38, 0.80) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-color: rgba(34, 211, 238, 0.20) !important;
+}
+
+/* Make inputs translucent and clear with blur */
+input, textarea, select {
+  background-color: rgba(2, 6, 23, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-color: rgba(34, 211, 238, 0.25) !important;
+  color: #ffffff !important;
+  transition: all 0.25s ease-in-out;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(34, 211, 238, 0.70) !important;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.25) !important;
+}
+
+/* Sidebar and Headers with transparent colors and blur */
+aside {
+  background-color: rgba(2, 6, 23, 0.45) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(34, 211, 238, 0.15) !important;
+}
+
+header {
+  background-color: rgba(2, 6, 23, 0.40) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.15) !important;
+}
+
+/* Custom glow borders corresponding to risk level - make them stand out in thin bright glowing vector strokes */
+.glow-expired {
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.25);
+  border: 1.5px solid rgba(244, 63, 94, 0.45) !important;
+  background-color: rgba(244, 63, 94, 0.05) !important;
+}
+
+.glow-critical {
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.25);
+  border: 1.5px solid rgba(244, 63, 94, 0.45) !important;
+  background-color: rgba(244, 63, 94, 0.05) !important;
+}
+
+.glow-high {
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.22);
+  border: 1.5px solid rgba(249, 115, 22, 0.40) !important;
+  background-color: rgba(249, 115, 22, 0.04) !important;
+}
+
+.glow-medium {
+  box-shadow: 0 0 16px rgba(234, 179, 8, 0.20);
+  border: 1.5px solid rgba(234, 179, 8, 0.35) !important;
+  background-color: rgba(234, 179, 8, 0.03) !important;
+}
+
+.glow-low {
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.20);
+  border: 1.5px solid rgba(34, 197, 94, 0.35) !important;
+  background-color: rgba(52, 211, 153, 0.03) !important;
+}
+
+.glow-agent {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  border: 1.5px solid rgba(99, 102, 241, 0.5) !important;
+  background-color: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* Floating luminous text accents with multi-layered high-contrast dark silhouette outlines for ultimate legibility *//* This acts as a protective shield / dark outline so words are perfectly shown to the human eye on any bright background */h1, h2, h3, h4, h5, h6, .font-display {
+  text-shadow: 
+    -1px -1px 0 rgba(2, 6, 23, 0.95),  
+     1px -1px 0 rgba(2, 6, 23, 0.95),  
+    -1px  1px 0 rgba(2, 6, 23, 0.95),  
+     1px  1px 0 rgba(2, 6, 23, 0.95),  
+     0 3px 12px rgba(2, 6, 23, 1),
+     0 0 15px rgba(34, 211, 238, 0.25);
+  letter-spacing: -0.015em;
+}
+
+p, span, label, input, select, textarea, button, table, th, td, a {
+  text-shadow: 
+    -1px -1px 0 rgba(2, 6, 23, 0.92),  
+     1px -1px 0 rgba(2, 6, 23, 0.92),  
+    -1px  1px 0 rgba(2, 6, 23, 0.92),  
+     1px  1px 0 rgba(2, 6, 23, 0.92),  
+     0 2px 6px rgba(2, 6, 23, 0.95);
+}
+
+.text-brand-accent {
+  text-shadow: 
+    -1px -1px 0 rgba(2, 6, 23, 0.95),  
+     1px -1px 0 rgba(2, 6, 23, 0.95),  
+    -1px  1px 0 rgba(2, 6, 23, 0.95),  
+     1px  1px 0 rgba(2, 6, 23, 0.95),  
+     0 0 10px rgba(34, 211, 238, 0.65);
+}
+
+.text-emerald-400, .text-emerald-500 {
+  text-shadow: 
+    -1px -1px 0 rgba(2, 6, 23, 0.95),  
+     1px -1px 0 rgba(2, 6, 23, 0.95),  
+    -1px  1px 0 rgba(2, 6, 23, 0.95),  
+     1px  1px 0 rgba(2, 6, 23, 0.95),  
+     0 0 10px rgba(52, 211, 153, 0.6);
+}
+
+.text-rose-400, .text-rose-500 {
+  text-shadow: 
+    -1px -1px 0 rgba(2, 6, 23, 0.95),  
+     1px -1px 0 rgba(2, 6, 23, 0.95),  
+    -1px  1px 0 rgba(2, 6, 23, 0.95),  
+     1px  1px 0 rgba(2, 6, 23, 0.95),  
+     0 0 10px rgba(244, 63, 94, 0.6);
+}
+
+/* Pulse keyframes for active scanning signals */
+@keyframes scanning-glow {
+  0%, 100% {
+    text-shadow: 0 0 6px #22d3ee, 0 0 12px rgba(34, 211, 238, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 14px #22d3ee, 0 0 24px rgba(34, 211, 238, 0.7);
+  }
+}
+
+.scanning-text-flash {
+  animation: scanning-glow 2s infinite ease-in-out;
+}
+
